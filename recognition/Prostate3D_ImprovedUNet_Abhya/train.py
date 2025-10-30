@@ -11,7 +11,7 @@ import os
 # ----------------------------
 # CONFIG
 # ----------------------------
-DATA_DIR = '.'  # change to dataset path on Rangpur
+DATA_DIR = 'data'  # change to dataset path on Rangpur
 EPOCHS = 5
 BATCH_SIZE = 1
 LR = 1e-3
