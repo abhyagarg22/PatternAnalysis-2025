@@ -23,7 +23,7 @@ model.eval()
 # Load data (or create fake one for testing)
 dataset = HipMRIDataset(DATA_DIR)
 if len(dataset) == 0:
-    print("⚠️ No MRI files found — creating fake test volume.")
+    print("No MRI files found — creating fake test volume.")
     fake = np.random.rand(64, 64, 64)
     nib.save(nib.Nifti1Image(fake, np.eye(4)), 'fake_test.nii')
     dataset = HipMRIDataset('.')
