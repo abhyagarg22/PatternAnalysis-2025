@@ -9,18 +9,19 @@ from modules import ImprovedUNet3D
 import os
 
 # ----------------------------
-# CONFIG
+# CONFIGURATION
 # ----------------------------
-DATA_DIR = '/home/groups/comp3710/HipMRI_Study_open'  # change to dataset path on Rangpur
+IMAGE_DIR = "/home/groups/comp3710/HipMRI_Study_open/semantic_MRs"
+LABEL_DIR = "/home/groups/comp3710/HipMRI_Study_open/semantic_labels_only"
 EPOCHS = 5
 BATCH_SIZE = 1
-LR = 1e-3
+LR = 0.001
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # ----------------------------
-# LOAD DATA
+# DATASET & DATALOADER
 # ----------------------------
-dataset = HipMRIDataset(DATA_DIR)
+dataset = HipMRIDataset(IMAGE_DIR, LABEL_DIR)
 dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
 
 # ----------------------------

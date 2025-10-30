@@ -8,31 +8,48 @@ from torch.utils.data import Dataset
 import numpy as np
 
 class HipMRIDataset(Dataset):
-    """Dataset class for 3D MRI volumes (.nii / .nii.gz)"""
-    def __init__(self, data_dir, transform=None):
-        self.data_dir = data_dir
+    def __init__(self, image_dir, label_dir, transform=None):
+        self.image_dir = image_dir
+        self.label_dir = label_dir
         self.transform = transform
-        self.image_paths = sorted([
-            os.path.join(data_dir, f)
-            for f in os.listdir(data_dir)
-            if f.endswith('.nii') or f.endswith('.nii.gz')
+
+        # Match images and labels based on patient ID prefix
+        self.image_files = sorted([
+            f for f in os.listdir(image_dir) if f.endswith('.nii.gz')
+        ])
+        self.label_files = sorted([
+            f for f in os.listdir(label_dir) if f.endswith('.nii.gz')
         ])
 
+        # Filter to keep only those with matching IDs
+        self.pairs = []
+        for img in self.image_files:
+            pid = img.split('_')[0]  # e.g. "D031"
+            match = next((l for l in self.label_files if l.startswith(pid)), None)
+            if match:
+                self.pairs.append((img, match))
+
     def __len__(self):
-        return len(self.image_paths)
+        return len(self.pairs)
 
     def __getitem__(self, idx):
-        img_path = self.image_paths[idx]
+        img_name, label_name = self.pairs[idx]
+        img_path = os.path.join(self.image_dir, img_name)
+        label_path = os.path.join(self.label_dir, label_name)
+
+        # Load MRI and label
         image = nib.load(img_path).get_fdata()
+        label = nib.load(label_path).get_fdata()
 
-        # Normalize to [0, 1]
+        # Normalize and convert
         image = (image - np.min(image)) / (np.max(image) - np.min(image) + 1e-8)
-
-        # Add channel dimension [1, D, H, W]
         image = np.expand_dims(image, axis=0)
+        label = np.expand_dims(label, axis=0)
+
         image = torch.tensor(image, dtype=torch.float32)
+        label = torch.tensor(label, dtype=torch.float32)
 
         if self.transform:
             image = self.transform(image)
 
-        return image
+        return image, label
