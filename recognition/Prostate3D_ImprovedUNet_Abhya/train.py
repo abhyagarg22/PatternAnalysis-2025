@@ -1,5 +1,5 @@
 # train.py — Project 7 (Abhya)
-# Training script for Improved 3D UNet model
+# Training script for Improved 3D U-Net
 
 import torch
 from torch import nn, optim
@@ -9,16 +9,16 @@ from modules import ImprovedUNet3D
 import os
 
 # ----------------------------
-# CONFIGURATION
+# CONFIG
 # ----------------------------
-DATA_DIR = '.'  # change to real dataset path on Rangpur
-EPOCHS = 2      # keep small for local testing
+DATA_DIR = '.'  # change to dataset path on Rangpur
+EPOCHS = 5
 BATCH_SIZE = 1
-LR = 0.001
+LR = 1e-3
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # ----------------------------
-# DATASET & DATALOADER
+# LOAD DATA
 # ----------------------------
 dataset = HipMRIDataset(DATA_DIR)
 dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
@@ -27,7 +27,7 @@ dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
 # MODEL, LOSS, OPTIMIZER
 # ----------------------------
 model = ImprovedUNet3D().to(DEVICE)
-criterion = nn.BCELoss()  # simple loss for segmentation
+criterion = nn.BCELoss()
 optimizer = optim.Adam(model.parameters(), lr=LR)
 
 # ----------------------------
@@ -35,20 +35,19 @@ optimizer = optim.Adam(model.parameters(), lr=LR)
 # ----------------------------
 for epoch in range(EPOCHS):
     model.train()
-    epoch_loss = 0.0
+    total_loss = 0.0
 
     for batch_idx, img in enumerate(dataloader):
         img = img.to(DEVICE)
         optimizer.zero_grad()
         output = model(img)
-        loss = criterion(output, img)  # using input as target (fake data)
+        loss = criterion(output, img)  # using input as pseudo-target for testing
         loss.backward()
         optimizer.step()
-
-        epoch_loss += loss.item()
+        total_loss += loss.item()
         print(f"Epoch [{epoch+1}/{EPOCHS}] Batch [{batch_idx+1}] Loss: {loss.item():.4f}")
 
-    print(f"Epoch [{epoch+1}/{EPOCHS}] Average Loss: {epoch_loss/len(dataloader):.4f}")
+    print(f"Epoch [{epoch+1}/{EPOCHS}] Average Loss: {total_loss/len(dataloader):.4f}")
 
 # ----------------------------
 # SAVE MODEL
@@ -56,4 +55,3 @@ for epoch in range(EPOCHS):
 os.makedirs('models', exist_ok=True)
 torch.save(model.state_dict(), 'models/improved_unet3d.pth')
 print("Training complete! Model saved to models/improved_unet3d.pth")
-
