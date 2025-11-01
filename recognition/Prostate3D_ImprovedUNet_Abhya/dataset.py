@@ -42,9 +42,14 @@ class HipMRIDataset(Dataset):
         label = nib.load(label_path).get_fdata()
 
         # Normalize and convert
+        # Normalize both image and label
         image = (image - np.min(image)) / (np.max(image) - np.min(image) + 1e-8)
+        label = (label - np.min(label)) / (np.max(label) - np.min(label) + 1e-8)
+
+        # Add channel dimension
         image = np.expand_dims(image, axis=0)
         label = np.expand_dims(label, axis=0)
+
 
         image = torch.tensor(image, dtype=torch.float32)
         label = torch.tensor(label, dtype=torch.float32)

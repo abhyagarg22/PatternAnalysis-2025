@@ -16,7 +16,7 @@ LABEL_DIR = "/home/groups/comp3710/HipMRI_Study_open/semantic_labels_only"
 
 EPOCHS = 5          # Increase if GPU allows
 BATCH_SIZE = 1
-LR = 0.0005
+LR = 0.0001
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 print(f"Using device: {DEVICE}")
@@ -38,7 +38,7 @@ dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
 # MODEL, LOSS, OPTIMIZER
 # ----------------------------
 model = ImprovedUNet3D().to(DEVICE)
-criterion = nn.BCELoss()
+criterion = nn.BCEWithLogitsLoss()
 optimizer = optim.Adam(model.parameters(), lr=LR)
 
 # ----------------------------
