@@ -10,6 +10,7 @@ import os
 
 MODEL_PATH = 'models/improved_unet3d.pth'
 DATA_DIR = "/home/groups/comp3710/HipMRI_Study_open/semantic_MRs"  # change to test data path
+LABEL_DIR = "/home/groups/comp3710/HipMRI_Study_open/semantic_labels_only"
 SAVE_DIR = 'predictions'
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -21,7 +22,8 @@ model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
 model.eval()
 
 # Load data 
-dataset = HipMRIDataset(DATA_DIR)
+dataset = HipMRIDataset(DATA_DIR, LABEL_DIR)
+
 if len(dataset) == 0:
     raise RuntimeError(f"No MRI files found in {DATA_DIR}")
 # if len(dataset) == 0:
