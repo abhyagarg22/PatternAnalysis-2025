@@ -26,7 +26,7 @@ LABEL_DIR = "/home/groups/comp3710/HipMRI_Study_open/semantic_labels_only"
 
 EPOCHS = 5      # Increase if GPU allows
 BATCH_SIZE = 1
-LR = 0.001
+LR = 0.0005
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 print(f"Using device: {DEVICE}")

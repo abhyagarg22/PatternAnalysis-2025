@@ -42,9 +42,10 @@ class HipMRIDataset(Dataset):
         label = nib.load(label_path).get_fdata()
 
         # Normalize and convert
-        # Normalize both image and label
+        # Normalize image intensity, binarize label
         image = (image - np.min(image)) / (np.max(image) - np.min(image) + 1e-8)
-        label = (label - np.min(label)) / (np.max(label) - np.min(label) + 1e-8)
+        label = (label > 0.5).astype(np.float32)
+
 
         # Add channel dimension
         image = np.expand_dims(image, axis=0)
