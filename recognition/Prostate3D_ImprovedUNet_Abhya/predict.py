@@ -9,7 +9,7 @@ from dataset import HipMRIDataset
 import os
 
 MODEL_PATH = 'models/improved_unet3d.pth'
-DATA_DIR = '.'   # change to test data path
+DATA_DIR = "/home/groups/comp3710/HipMRI_Study_open/semantic_MRs"  # change to test data path
 SAVE_DIR = 'predictions'
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -20,13 +20,15 @@ model = ImprovedUNet3D().to(DEVICE)
 model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
 model.eval()
 
-# Load data (or create fake one for testing)
+# Load data 
 dataset = HipMRIDataset(DATA_DIR)
 if len(dataset) == 0:
-    print("No MRI files found — creating fake test volume.")
-    fake = np.random.rand(64, 64, 64)
-    nib.save(nib.Nifti1Image(fake, np.eye(4)), 'fake_test.nii')
-    dataset = HipMRIDataset('.')
+    raise RuntimeError(f"No MRI files found in {DATA_DIR}")
+# if len(dataset) == 0:
+    #print("No MRI files found — creating fake test volume.")
+    #fake = np.random.rand(64, 64, 64)
+    #nib.save(nib.Nifti1Image(fake, np.eye(4)), 'fake_test.nii')
+    #dataset = HipMRIDataset('.')
 
 img = dataset[0].unsqueeze(0).to(DEVICE)  # [1, 1, D, H, W]
 

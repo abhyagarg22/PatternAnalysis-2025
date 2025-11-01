@@ -1,27 +1,37 @@
 # train.py — Project 7 (Abhya)
-# Training script for Improved 3D U-Net
+# Training script for Improved 3D UNet model on Rangpur GPU cluster
 
+import os
 import torch
 from torch import nn, optim
 from torch.utils.data import DataLoader
 from dataset import HipMRIDataset
 from modules import ImprovedUNet3D
-import os
 
 # ----------------------------
 # CONFIGURATION
 # ----------------------------
-IMAGE_DIR = "/home/groups/comp3710/HipMRI_Study_open/semantic_MRs"
+MRI_DIR = "/home/groups/comp3710/HipMRI_Study_open/semantic_MRs"
 LABEL_DIR = "/home/groups/comp3710/HipMRI_Study_open/semantic_labels_only"
-EPOCHS = 5
+
+EPOCHS = 5          # Increase if GPU allows
 BATCH_SIZE = 1
-LR = 0.001
+LR = 0.0005
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+print(f"Using device: {DEVICE}")
+if DEVICE.type == "cuda":
+    print("CUDA available — training on GPU")
+else:
+    print("CUDA not available — training on CPU")
 
 # ----------------------------
 # DATASET & DATALOADER
 # ----------------------------
-dataset = HipMRIDataset(IMAGE_DIR, LABEL_DIR)
+dataset = HipMRIDataset(MRI_DIR, LABEL_DIR, transform=None)
+if len(dataset) == 0:
+    raise RuntimeError(f"No .nii.gz files found in {MRI_DIR}. Please check dataset path.")
+
 dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
 
 # ----------------------------
@@ -36,23 +46,31 @@ optimizer = optim.Adam(model.parameters(), lr=LR)
 # ----------------------------
 for epoch in range(EPOCHS):
     model.train()
-    total_loss = 0.0
+    epoch_loss = 0.0
 
-    for batch_idx, img in enumerate(dataloader):
+    for batch_idx, batch in enumerate(dataloader):
+        if isinstance(batch, (list, tuple)):
+            img, label = batch
+        else:
+            img, label = batch, batch
+
         img = img.to(DEVICE)
+        label = label.to(DEVICE)
         optimizer.zero_grad()
         output = model(img)
-        loss = criterion(output, img)  # using input as pseudo-target for testing
+        loss = criterion(output, label)
         loss.backward()
         optimizer.step()
-        total_loss += loss.item()
-        print(f"Epoch [{epoch+1}/{EPOCHS}] Batch [{batch_idx+1}] Loss: {loss.item():.4f}")
 
-    print(f"Epoch [{epoch+1}/{EPOCHS}] Average Loss: {total_loss/len(dataloader):.4f}")
+        epoch_loss += loss.item()
+        print(f"Epoch [{epoch+1}/{EPOCHS}] Batch [{batch_idx+1}/{len(dataloader)}] Loss: {loss.item():.4f}")
+
+    avg_loss = epoch_loss / len(dataloader)
+    print(f"Epoch [{epoch+1}/{EPOCHS}] Average Loss: {avg_loss:.4f}")
 
 # ----------------------------
 # SAVE MODEL
 # ----------------------------
-os.makedirs('models', exist_ok=True)
-torch.save(model.state_dict(), 'models/improved_unet3d.pth')
+os.makedirs("models", exist_ok=True)
+torch.save(model.state_dict(), "models/improved_unet3d.pth")
 print("Training complete! Model saved to models/improved_unet3d.pth")
