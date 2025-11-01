@@ -32,7 +32,8 @@ if len(dataset) == 0:
     #nib.save(nib.Nifti1Image(fake, np.eye(4)), 'fake_test.nii')
     #dataset = HipMRIDataset('.')
 
-img = dataset[0].unsqueeze(0).to(DEVICE)  # [1, 1, D, H, W]
+img, _ = dataset[0]
+img = img.unsqueeze(0).to(DEVICE)  # [1, 1, D, H, W]
 
 with torch.no_grad():
     pred = model(img)
