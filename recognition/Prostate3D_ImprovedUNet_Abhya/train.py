@@ -58,6 +58,10 @@ for epoch in range(EPOCHS):
         label = label.to(DEVICE)
         optimizer.zero_grad()
         output = model(img)
+        if output.shape != label.shape:
+          label = torch.nn.functional.interpolate(
+            label, size=output.shape[2:], mode='trilinear', align_corners=False
+          )
         loss = criterion(output, label)
         loss.backward()
         optimizer.step()
