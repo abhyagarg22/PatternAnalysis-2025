@@ -44,6 +44,9 @@ with torch.no_grad():
         pred = torch.argmax(pred, dim=1, keepdim=True).float()
     else:
         pred = torch.sigmoid(pred)
+    pred = pred.float()
+    print("Pred stats:",
+        float(pred.min()), float(pred.max()), float(pred.mean()))
         
 
 
