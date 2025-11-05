@@ -40,8 +40,7 @@ with torch.no_grad():
     pred = torch.sigmoid(pred)  # always do this for binary segmentation
 
     pred = pred.float()
-    print("Pred stats:",
-          float(pred.min()), float(pred.max()), float(pred.mean()))
+    print("After sigmoid:", float(pred.min()), float(pred.max()), float(pred.mean()))
 
         
 
