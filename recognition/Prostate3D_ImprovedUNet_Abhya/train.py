@@ -14,9 +14,12 @@ def dice_loss(pred, target, smooth=1e-5):
     return 1 - (2. * intersection + smooth) / (pred.sum() + target.sum() + smooth)
 
 def combined_loss(pred, target):
-    bce = F.binary_cross_entropy_with_logits(pred, target)
+    # Weighted BCE: emphasize positive (prostate) voxels ~10×
+    weight = target * 10 + 1
+    bce = F.binary_cross_entropy_with_logits(pred, target, weight=weight)
     dice = dice_loss(pred, target)
-    return bce + dice
+    # Combine — Dice dominates because prostate is small
+    return 0.7 * dice + 0.3 * bce
 
 # ----------------------------
 # CONFIGURATION
