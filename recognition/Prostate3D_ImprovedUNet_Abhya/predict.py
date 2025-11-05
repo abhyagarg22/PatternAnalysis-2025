@@ -32,21 +32,30 @@ if len(dataset) == 0:
     #nib.save(nib.Nifti1Image(fake, np.eye(4)), 'fake_test.nii')
     #dataset = HipMRIDataset('.')
 
-img, _ = dataset[0]
-img = img.unsqueeze(0).to(DEVICE)  # [1, 1, D, H, W]
+# --- Loop through all MRIs ---
+for idx, (img_name, _) in enumerate(dataset.pairs, 1):
+    print(f"[{idx}/{len(dataset)}] Predicting: {img_name}")
 
-with torch.no_grad():
-    pred = model(img)
-    pred = torch.sigmoid(pred)  # always do this for binary segmentation
+    img, _ = dataset[idx - 1]
+    img = img.unsqueeze(0).to(DEVICE)
 
-    pred = pred.float()
-    print("After sigmoid:", float(pred.min()), float(pred.max()), float(pred.mean()))
+    with torch.no_grad():
+        pred = model(img)
+        pred = torch.sigmoid(pred).float()
+
+    pred_np = pred.squeeze().cpu().numpy()
+    print(f"    Stats -> min={float(pred.min()):.5f}, max={float(pred.max()):.5f}, mean={float(pred.mean()):.5f}")
+
+    # save prediction with proper name
+    base_name = img_name.replace("_LFOV.nii.gz", "")
+    save_path = os.path.join(SAVE_DIR, f"{base_name}_prediction.nii")
+    nib.save(nib.Nifti1Image(pred_np, np.eye(4)), save_path)
+    print(f" Saved: {save_path}\n")
+
+print("All predictions completed successfully. Files saved in:", SAVE_DIR)
+
+
 
         
 
 
-pred_np = pred.squeeze().cpu().numpy()
-save_path = os.path.join(SAVE_DIR, 'prediction.nii')
-nib.save(nib.Nifti1Image(pred_np, np.eye(4)), save_path)
-print(f"Prediction saved to {save_path}")
-print("Output shape:", pred_np.shape)
