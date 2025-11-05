@@ -37,16 +37,12 @@ img = img.unsqueeze(0).to(DEVICE)  # [1, 1, D, H, W]
 
 with torch.no_grad():
     pred = model(img)
+    pred = torch.sigmoid(pred)  # always do this for binary segmentation
 
-    # --- check if multi-class ---
-    if pred.shape[1] > 1:  # e.g., [1, 6, D, H, W]
-        pred = torch.softmax(pred, dim=1)
-        pred = torch.argmax(pred, dim=1, keepdim=True).float()
-    else:
-        pred = torch.sigmoid(pred)
     pred = pred.float()
     print("Pred stats:",
-        float(pred.min()), float(pred.max()), float(pred.mean()))
+          float(pred.min()), float(pred.max()), float(pred.mean()))
+
         
 
 
