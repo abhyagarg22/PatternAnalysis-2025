@@ -16,7 +16,7 @@ import torch.nn.functional as F
 MRI_DIR = "/home/groups/comp3710/HipMRI_Study_open/semantic_MRs"
 LABEL_DIR = "/home/groups/comp3710/HipMRI_Study_open/semantic_labels_only"
 
-EPOCHS = 10    # Increase if GPU allows
+EPOCHS = 15    # Increase if GPU allows
 BATCH_SIZE = 1
 LR = 0.0001
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
