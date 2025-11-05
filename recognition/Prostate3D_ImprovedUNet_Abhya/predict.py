@@ -45,10 +45,15 @@ for idx, (img_name, _) in enumerate(dataset.pairs, 1):
         pred_np = pred.squeeze(0).cpu().numpy().astype(np.uint8)
 
     # save prediction with proper name
+        # ---- Save prediction with correct alignment ----
+    img_path = os.path.join(DATA_DIR, img_name)
+    affine = nib.load(img_path).affine   # copy affine from original MRI
+
     base_name = img_name.replace("_LFOV.nii.gz", "")
-    save_path = os.path.join(SAVE_DIR, f"{base_name}_prediction.nii")
-    nib.save(nib.Nifti1Image(pred_np, np.eye(4)), save_path)
-    print(f" Saved: {save_path}\n")
+    save_path = os.path.join(SAVE_DIR, f"{base_name}_prediction.nii.gz")  # save as .nii.gz
+    nib.save(nib.Nifti1Image(pred_np, affine), save_path)  # aligned save
+    print(f" Saved aligned file: {save_path}\n")
+
 
 print("All predictions completed successfully. Files saved in:", SAVE_DIR)
 
