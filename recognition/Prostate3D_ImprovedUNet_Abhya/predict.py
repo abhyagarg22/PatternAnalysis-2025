@@ -37,7 +37,15 @@ img = img.unsqueeze(0).to(DEVICE)  # [1, 1, D, H, W]
 
 with torch.no_grad():
     pred = model(img)
-    pred = torch.sigmoid(pred)
+
+    # --- check if multi-class ---
+    if pred.shape[1] > 1:  # e.g., [1, 6, D, H, W]
+        pred = torch.softmax(pred, dim=1)
+        pred = torch.argmax(pred, dim=1, keepdim=True).float()
+    else:
+        pred = torch.sigmoid(pred)
+        pred = (pred > 0.7).float()
+
 
 pred_np = pred.squeeze().cpu().numpy()
 save_path = os.path.join(SAVE_DIR, 'prediction.nii')
