@@ -40,11 +40,9 @@ for idx, (img_name, _) in enumerate(dataset.pairs, 1):
     img = img.unsqueeze(0).to(DEVICE)
 
     with torch.no_grad():
-        pred = model(img)
-        pred = torch.sigmoid(pred).float()
-
-    pred_np = pred.squeeze().cpu().numpy()
-    print(f"    Stats -> min={float(pred.min()):.5f}, max={float(pred.max()):.5f}, mean={float(pred.mean()):.5f}")
+        logits = model(img)                  # [1, 6, D, H, W]
+        pred = torch.argmax(logits, dim=1)   # [1, D, H, W]
+        pred_np = pred.squeeze(0).cpu().numpy().astype(np.uint8)
 
     # save prediction with proper name
     base_name = img_name.replace("_LFOV.nii.gz", "")

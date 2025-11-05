@@ -8,19 +8,6 @@ from torch.utils.data import DataLoader, random_split
 from dataset import HipMRIDataset
 from modules import ImprovedUNet3D
 import torch.nn.functional as F 
-def dice_loss(pred, target, smooth=1e-5):
-    pred = torch.sigmoid(pred)
-    intersection = (pred * target).sum()
-    return 1 - (2. * intersection + smooth) / (pred.sum() + target.sum() + smooth)
-
-def focal_loss(pred, target, alpha=0.8, gamma=2.0):
-    bce = F.binary_cross_entropy_with_logits(pred, target, reduction="none")
-    pt = torch.exp(-bce)
-    return (alpha * (1 - pt) ** gamma * bce).mean()
-
-def combined_loss(pred, target):
-    # use Dice + Focal to push outputs closer to 0 or 1
-    return dice_loss(pred, target) + focal_loss(pred, target)
 
 
 # ----------------------------
@@ -59,9 +46,22 @@ val_loader = DataLoader(val_set, batch_size=1, shuffle=False)
 # ----------------------------
 # MODEL, LOSS, OPTIMIZER
 # ----------------------------
-model = ImprovedUNet3D().to(DEVICE)
-criterion = combined_loss 
+model = ImprovedUNet3D().to(DEVICE)       # outputs 6 channels now
+criterion = nn.CrossEntropyLoss()         # multiclass loss
 optimizer = optim.Adam(model.parameters(), lr=LR, weight_decay=1e-5)
+
+def multiclass_dice(pred, target, num_classes=6, eps=1e-6):
+    """Compute mean Dice coefficient across all classes."""
+    dice_scores = []
+    for c in range(num_classes):
+        pred_c = (pred == c).float()
+        target_c = (target == c).float()
+        intersection = (pred_c * target_c).sum()
+        union = pred_c.sum() + target_c.sum()
+        dice = (2 * intersection + eps) / (union + eps)
+        dice_scores.append(dice)
+    return torch.mean(torch.stack(dice_scores))
+
 
 # ----------------------------
 # TRAINING LOOP
@@ -73,56 +73,58 @@ for epoch in range(EPOCHS):
 
     for batch_idx, (img, label) in enumerate(train_loader):
         img = img.to(DEVICE)
-        label = label.to(DEVICE)
+        label = label.to(DEVICE).long()  # important for CrossEntropyLoss
 
         optimizer.zero_grad()
-        output = model(img)
-        if output.shape != label.shape:
-            label = F.interpolate(label, size=output.shape[2:], mode='trilinear', align_corners=False)
+        output = model(img)  # [B, 6, D, H, W]
+
+        # adjust label size if mismatch
+        if output.shape[2:] != label.shape[1:]:
+            label = F.interpolate(
+                label.unsqueeze(1).float(),
+                size=output.shape[2:],
+                mode="nearest"
+            ).squeeze(1).long()
 
         loss = criterion(output, label)
+        loss.backward()
+        optimizer.step()
 
-        # Dice coefficient
         with torch.no_grad():
-            preds = torch.sigmoid(output)
-            preds = (preds > 0.5).float()
-            intersection = (preds * label).sum()
-            dice = (2. * intersection) / (preds.sum() + label.sum() + 1e-8)
-            print(f"    batch pred mean={preds.mean().item():.4f}")
+            preds = torch.argmax(output, dim=1)
+            dice = multiclass_dice(preds, label)
 
         epoch_loss += loss.item()
         epoch_dice += dice.item()
 
-        print(f"Epoch [{epoch+1}/{EPOCHS}] Batch [{batch_idx+1}/{len(train_loader)}] Loss: {loss.item():.4f} | Dice: {dice.item():.4f}")
+        print(f"Epoch [{epoch+1}/{EPOCHS}] Batch [{batch_idx+1}/{len(train_loader)}] "
+              f"Loss: {loss.item():.4f} | Dice: {dice.item():.4f}")
 
-        loss.backward()
-        optimizer.step()
-
+    # summary for the epoch
     avg_loss = epoch_loss / len(train_loader)
     avg_dice = epoch_dice / len(train_loader)
-    print(f"Epoch [{epoch+1}/{EPOCHS}] Train Loss: {avg_loss:.4f} | Train Dice: {avg_dice:.4f}")
-    # --- VALIDATION LOOP ---
+    print(f"\n📘 Epoch [{epoch+1}/{EPOCHS}] Train Loss: {avg_loss:.4f} | Train Dice: {avg_dice:.4f}")
+
+    # ---- VALIDATION ----
     model.eval()
     val_dice = 0.0
     with torch.no_grad():
         for img, label in val_loader:
             img = img.to(DEVICE)
-            label = label.to(DEVICE)
-
+            label = label.to(DEVICE).long()
             output = model(img)
-        # make sure label matches output size
-            if output.shape != label.shape:
-                label = F.interpolate(label, size=output.shape[2:], mode='trilinear', align_corners=False)
 
-            output = torch.sigmoid(output)
-            pred_bin = (output > 0.5).float()
-            intersection = (pred_bin * label).sum()
-            dice = (2. * intersection) / (pred_bin.sum() + label.sum() + 1e-8)
-            val_dice += dice.item()
+            if output.shape[2:] != label.shape[1:]:
+                label = F.interpolate(
+                    label.unsqueeze(1).float(),
+                    size=output.shape[2:],
+                    mode="nearest"
+                ).squeeze(1).long()
 
-    val_dice = val_dice / len(val_loader)
-    print(f"Validation Dice: {val_dice:.4f}")
-    model.train()
+            preds = torch.argmax(output, dim=1)
+            val_dice += multiclass_dice(preds, label).item()
+
+    print(f"🧪 Validation Dice: {val_dice / len(val_loader):.4f}\n")
 
 
 # ----------------------------

@@ -33,7 +33,7 @@ class ResidualBlock3D(nn.Module):
 
 class ImprovedUNet3D(nn.Module):
     """Improved 3D U-Net with residual encoder-decoder blocks"""
-    def __init__(self, in_channels=1, out_channels=1, base_filters=32):
+    def __init__(self, in_channels=1, out_channels=6, base_filters=32):
         super().__init__()
 
         # Encoder
