@@ -44,7 +44,7 @@ with torch.no_grad():
         pred = torch.argmax(pred, dim=1, keepdim=True).float()
     else:
         pred = torch.sigmoid(pred)
-        pred = (pred > 0.7).float()
+        
 
 
 pred_np = pred.squeeze().cpu().numpy()
