@@ -24,7 +24,7 @@ class HipMRIDataset(Dataset):
         # Filter to keep only those with matching IDs
         self.pairs = []
         for img in self.image_files:
-            pid = img.split('_')[0]  # e.g. "D031"
+            pid = "_".join(img.split("_")[:2])  # e.g. "D031"
             match = next((l for l in self.label_files if l.startswith(pid)), None)
             if match:
                 self.pairs.append((img, match))
