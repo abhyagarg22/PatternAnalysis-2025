@@ -14,9 +14,12 @@ def dice_loss(pred, target, smooth=1e-5):
     return 1 - (2. * intersection + smooth) / (pred.sum() + target.sum() + smooth)
 
 def combined_loss(pred, target):
-    bce = F.binary_cross_entropy_with_logits(pred, target)
+    # make foreground more important
+    pos_w = torch.tensor([5.0], device=pred.device)
+    bce = F.binary_cross_entropy_with_logits(pred, target, pos_weight=pos_w)
     dice = dice_loss(pred, target)
-    return bce + dice
+    # balance them
+    return 0.5 * bce + 0.5 * dice
 
 # ----------------------------
 # CONFIGURATION
@@ -26,7 +29,7 @@ LABEL_DIR = "/home/groups/comp3710/HipMRI_Study_open/semantic_labels_only"
 
 EPOCHS = 10    # Increase if GPU allows
 BATCH_SIZE = 1
-LR = 0.0003
+LR = 0.0001
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 print(f"Using device: {DEVICE}")
@@ -83,6 +86,7 @@ for epoch in range(EPOCHS):
             preds = (preds > 0.5).float()
             intersection = (preds * label).sum()
             dice = (2. * intersection) / (preds.sum() + label.sum() + 1e-8)
+            print(f"    batch pred mean={preds.mean().item():.4f}")
 
         epoch_loss += loss.item()
         epoch_dice += dice.item()
