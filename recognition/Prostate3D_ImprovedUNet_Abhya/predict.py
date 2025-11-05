@@ -37,7 +37,7 @@ img = img.unsqueeze(0).to(DEVICE)  # [1, 1, D, H, W]
 
 with torch.no_grad():
     pred = model(img)
-    pred = (pred > 0.7).float()
+    pred = torch.sigmoid(pred)
 
 pred_np = pred.squeeze().cpu().numpy()
 save_path = os.path.join(SAVE_DIR, 'prediction.nii')
