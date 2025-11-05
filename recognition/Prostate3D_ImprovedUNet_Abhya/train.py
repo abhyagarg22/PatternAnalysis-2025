@@ -14,12 +14,9 @@ def dice_loss(pred, target, smooth=1e-5):
     return 1 - (2. * intersection + smooth) / (pred.sum() + target.sum() + smooth)
 
 def combined_loss(pred, target):
-    # Weighted BCE: emphasize positive (prostate) voxels ~10×
-    weight = target * 10 + 1
-    bce = F.binary_cross_entropy_with_logits(pred, target, weight=weight)
+    bce = F.binary_cross_entropy_with_logits(pred, target)
     dice = dice_loss(pred, target)
-    # Combine — Dice dominates because prostate is small
-    return 0.7 * dice + 0.3 * bce
+    return bce + dice
 
 # ----------------------------
 # CONFIGURATION
@@ -27,7 +24,7 @@ def combined_loss(pred, target):
 MRI_DIR = "/home/groups/comp3710/HipMRI_Study_open/semantic_MRs"
 LABEL_DIR = "/home/groups/comp3710/HipMRI_Study_open/semantic_labels_only"
 
-EPOCHS = 2     # Increase if GPU allows
+EPOCHS = 5    # Increase if GPU allows
 BATCH_SIZE = 1
 LR = 0.0005
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

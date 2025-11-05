@@ -44,7 +44,7 @@ class HipMRIDataset(Dataset):
         # Normalize and convert
         # Normalize image intensity, binarize label
         image = (image - np.min(image)) / (np.max(image) - np.min(image) + 1e-8)
-        label = (label == 5).astype(np.float32)
+        label = (label > 0.5).astype(np.float32)
 
 
         # Add channel dimension
