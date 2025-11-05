@@ -13,13 +13,15 @@ def dice_loss(pred, target, smooth=1e-5):
     intersection = (pred * target).sum()
     return 1 - (2. * intersection + smooth) / (pred.sum() + target.sum() + smooth)
 
+def focal_loss(pred, target, alpha=0.8, gamma=2.0):
+    bce = F.binary_cross_entropy_with_logits(pred, target, reduction="none")
+    pt = torch.exp(-bce)
+    return (alpha * (1 - pt) ** gamma * bce).mean()
+
 def combined_loss(pred, target):
-    # make foreground more important
-    pos_w = torch.tensor([5.0], device=pred.device)
-    bce = F.binary_cross_entropy_with_logits(pred, target, pos_weight=pos_w)
-    dice = dice_loss(pred, target)
-    # balance them
-    return 0.5 * bce + 0.5 * dice
+    # use Dice + Focal to push outputs closer to 0 or 1
+    return dice_loss(pred, target) + focal_loss(pred, target)
+
 
 # ----------------------------
 # CONFIGURATION
@@ -59,7 +61,7 @@ val_loader = DataLoader(val_set, batch_size=1, shuffle=False)
 # ----------------------------
 model = ImprovedUNet3D().to(DEVICE)
 criterion = combined_loss 
-optimizer = optim.Adam(model.parameters(), lr=LR)
+optimizer = optim.Adam(model.parameters(), lr=LR, weight_decay=1e-5)
 
 # ----------------------------
 # TRAINING LOOP
