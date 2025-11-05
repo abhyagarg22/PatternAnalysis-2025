@@ -27,7 +27,7 @@ def combined_loss(pred, target):
 MRI_DIR = "/home/groups/comp3710/HipMRI_Study_open/semantic_MRs"
 LABEL_DIR = "/home/groups/comp3710/HipMRI_Study_open/semantic_labels_only"
 
-EPOCHS = 5      # Increase if GPU allows
+EPOCHS = 2     # Increase if GPU allows
 BATCH_SIZE = 1
 LR = 0.0005
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -60,38 +60,38 @@ optimizer = optim.Adam(model.parameters(), lr=LR)
 for epoch in range(EPOCHS):
     model.train()
     epoch_loss = 0.0
+    epoch_dice = 0.0
 
-    for batch_idx, batch in enumerate(dataloader):
-        if isinstance(batch, (list, tuple)):
-            img, label = batch
-        else:
-            img, label = batch, batch
-
+    for batch_idx, (img, label) in enumerate(dataloader):
         img = img.to(DEVICE)
         label = label.to(DEVICE)
+
         optimizer.zero_grad()
         output = model(img)
         if output.shape != label.shape:
-          label = torch.nn.functional.interpolate(
-            label, size=output.shape[2:], mode='trilinear', align_corners=False
-          )
+            label = F.interpolate(label, size=output.shape[2:], mode='trilinear', align_corners=False)
+
         loss = criterion(output, label)
-        # Compute Dice metric for monitoring
+
+        # Dice coefficient
         with torch.no_grad():
-          preds = torch.sigmoid(output)
-          preds = (preds > 0.5).float()
-          intersection = (preds * label).sum()
-          dice = (2. * intersection) / (preds.sum() + label.sum() + 1e-8)
+            preds = torch.sigmoid(output)
+            preds = (preds > 0.5).float()
+            intersection = (preds * label).sum()
+            dice = (2. * intersection) / (preds.sum() + label.sum() + 1e-8)
+
+        epoch_loss += loss.item()
+        epoch_dice += dice.item()
+
         print(f"Epoch [{epoch+1}/{EPOCHS}] Batch [{batch_idx+1}/{len(dataloader)}] Loss: {loss.item():.4f} | Dice: {dice.item():.4f}")
 
         loss.backward()
         optimizer.step()
 
-        epoch_loss += loss.item()
-        print(f"Epoch [{epoch+1}/{EPOCHS}] Batch [{batch_idx+1}/{len(dataloader)}] Loss: {loss.item():.4f}")
-
     avg_loss = epoch_loss / len(dataloader)
-    print(f"Epoch [{epoch+1}/{EPOCHS}] Average Loss: {avg_loss:.4f}")
+    avg_dice = epoch_dice / len(dataloader)
+    print(f"Epoch [{epoch+1}/{EPOCHS}] Average Loss: {avg_loss:.4f} | Average Dice: {avg_dice:.4f}")
+
 
 # ----------------------------
 # SAVE MODEL
