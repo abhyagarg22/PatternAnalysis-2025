@@ -4,7 +4,7 @@
 import os
 import torch
 from torch import nn, optim
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, random_split
 from dataset import HipMRIDataset
 from modules import ImprovedUNet3D
 import torch.nn.functional as F 
@@ -24,9 +24,9 @@ def combined_loss(pred, target):
 MRI_DIR = "/home/groups/comp3710/HipMRI_Study_open/semantic_MRs"
 LABEL_DIR = "/home/groups/comp3710/HipMRI_Study_open/semantic_labels_only"
 
-EPOCHS = 5    # Increase if GPU allows
+EPOCHS = 10    # Increase if GPU allows
 BATCH_SIZE = 1
-LR = 0.0005
+LR = 0.0003
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 print(f"Using device: {DEVICE}")
@@ -42,7 +42,14 @@ dataset = HipMRIDataset(MRI_DIR, LABEL_DIR, transform=None)
 if len(dataset) == 0:
     raise RuntimeError(f"No .nii.gz files found in {MRI_DIR}. Please check dataset path.")
 
-dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
+# 80% train, 20% val
+train_size = int(0.8 * len(dataset))
+val_size = len(dataset) - train_size
+train_set, val_set = random_split(dataset, [train_size, val_size])
+
+train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True)
+val_loader = DataLoader(val_set, batch_size=1, shuffle=False)
+
 
 # ----------------------------
 # MODEL, LOSS, OPTIMIZER
@@ -59,7 +66,7 @@ for epoch in range(EPOCHS):
     epoch_loss = 0.0
     epoch_dice = 0.0
 
-    for batch_idx, (img, label) in enumerate(dataloader):
+    for batch_idx, (img, label) in enumerate(train_loader):
         img = img.to(DEVICE)
         label = label.to(DEVICE)
 
@@ -80,14 +87,36 @@ for epoch in range(EPOCHS):
         epoch_loss += loss.item()
         epoch_dice += dice.item()
 
-        print(f"Epoch [{epoch+1}/{EPOCHS}] Batch [{batch_idx+1}/{len(dataloader)}] Loss: {loss.item():.4f} | Dice: {dice.item():.4f}")
+        print(f"Epoch [{epoch+1}/{EPOCHS}] Batch [{batch_idx+1}/{len(train_loader)}] Loss: {loss.item():.4f} | Dice: {dice.item():.4f}")
 
         loss.backward()
         optimizer.step()
 
-    avg_loss = epoch_loss / len(dataloader)
-    avg_dice = epoch_dice / len(dataloader)
-    print(f"Epoch [{epoch+1}/{EPOCHS}] Average Loss: {avg_loss:.4f} | Average Dice: {avg_dice:.4f}")
+    avg_loss = epoch_loss / len(train_loader)
+    avg_dice = epoch_dice / len(train_loader)
+    print(f"Epoch [{epoch+1}/{EPOCHS}] Train Loss: {avg_loss:.4f} | Train Dice: {avg_dice:.4f}")
+    # --- VALIDATION LOOP ---
+    model.eval()
+    val_dice = 0.0
+    with torch.no_grad():
+        for img, label in val_loader:
+            img = img.to(DEVICE)
+            label = label.to(DEVICE)
+
+            output = model(img)
+        # make sure label matches output size
+            if output.shape != label.shape:
+                label = F.interpolate(label, size=output.shape[2:], mode='trilinear', align_corners=False)
+
+            output = torch.sigmoid(output)
+            pred_bin = (output > 0.5).float()
+            intersection = (pred_bin * label).sum()
+            dice = (2. * intersection) / (pred_bin.sum() + label.sum() + 1e-8)
+            val_dice += dice.item()
+
+    val_dice = val_dice / len(val_loader)
+    print(f"Validation Dice: {val_dice:.4f}")
+    model.train()
 
 
 # ----------------------------
