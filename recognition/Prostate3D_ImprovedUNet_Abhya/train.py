@@ -133,7 +133,7 @@ for epoch in range(EPOCHS):
     # summary for the epoch
     avg_loss = epoch_loss / len(train_loader)
     avg_dice = epoch_dice / len(train_loader)
-    print(f"\n📘 Epoch [{epoch+1}/{EPOCHS}] Train Loss: {avg_loss:.4f} | Train Dice: {avg_dice:.4f}")
+    print(f"\n Epoch [{epoch+1}/{EPOCHS}] Train Loss: {avg_loss:.4f} | Train Dice: {avg_dice:.4f}")
 
     # ---- VALIDATION ----
     model.eval()
@@ -154,8 +154,12 @@ for epoch in range(EPOCHS):
             preds = torch.argmax(output, dim=1)
             val_dice += multiclass_dice(preds, label).item()
     val_dice_avg = val_dice / len(val_loader)
-    print(f"Validation Dice: {val_dice / len(val_loader):.4f}\n")
     scheduler.step(val_dice_avg)
+
+    # Print final Dice after last epoch
+    if epoch == EPOCHS - 1:
+        print(f"\n Final Training Dice Coefficient: {avg_dice:.4f}")
+
     
 
 # ----------------------------
