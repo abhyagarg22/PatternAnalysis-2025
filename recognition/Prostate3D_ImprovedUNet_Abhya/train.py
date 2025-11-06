@@ -19,7 +19,7 @@ MRI_DIR = "/home/groups/comp3710/HipMRI_Study_open/semantic_MRs"
 LABEL_DIR = "/home/groups/comp3710/HipMRI_Study_open/semantic_labels_only"
 
 EPOCHS = 10    # Increase if GPU allows
-BATCH_SIZE = 2
+BATCH_SIZE = 1
 LR = 0.001
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -117,6 +117,8 @@ for epoch in range(EPOCHS):
         scaler.scale(loss).backward()
         scaler.step(optimizer)
         scaler.update()
+        torch.cuda.empty_cache()
+
 
         with torch.no_grad():
             preds = torch.argmax(output, dim=1)
