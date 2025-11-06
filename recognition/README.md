@@ -311,6 +311,41 @@ for f in all_preds[-3:]:
 ```
 ---
 
+### Training slurm script (train_gpu.slurm)
+```bash
+#!/bin/bash
+#SBATCH --job-name=Prostate3D_ImprovedUNet
+#SBATCH --partition=a100              # use the working GPU partition
+#SBATCH --gres=gpu:a100:1             # request one A100 GPU
+#SBATCH --cpus-per-task=4             # for data loading
+#SBATCH --time=01:00:00               # 1 hour
+#SBATCH --output=train_output.txt
+#SBATCH --error=train_error.txt
+#SBATCH --mail-user=s4829978@uq.edu.au
+#SBATCH --mail-type=BEGIN,END,FAIL
+
+# -------------------------------
+# Environment Setup
+# -------------------------------
+module load cuda/12.2
+source ~/miniconda3/etc/profile.d/conda.sh
+conda activate unet
+
+# -------------------------------
+# Navigate to project directory
+# -------------------------------
+cd ~/PatternAnalysis-2025/recognition/Prostate3D_ImprovedUNet_Abhya
+
+# -------------------------------
+# Run Training & Inference
+# -------------------------------
+python train.py
+python predict.py
+
+
+```
+---
+
 ## Quantitative Results
 
 ### Training Summary (Final Epoch)
