@@ -18,7 +18,7 @@ import torch.nn.functional as F
 MRI_DIR = "/home/groups/comp3710/HipMRI_Study_open/semantic_MRs"
 LABEL_DIR = "/home/groups/comp3710/HipMRI_Study_open/semantic_labels_only"
 
-EPOCHS = 10    # Increase if GPU allows
+EPOCHS = 15    # Increase if GPU allows
 BATCH_SIZE = 1
 LR = 0.001
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -155,6 +155,8 @@ for epoch in range(EPOCHS):
             val_dice += multiclass_dice(preds, label).item()
     val_dice_avg = val_dice / len(val_loader)
     scheduler.step(val_dice_avg)
+    for g in optimizer.param_groups:
+        g['lr'] = max(g['lr'] * 0.8, 1e-5)
 
     # Print final Dice after last epoch
     if epoch == EPOCHS - 1:
