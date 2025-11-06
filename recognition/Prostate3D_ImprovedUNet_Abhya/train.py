@@ -7,7 +7,9 @@ from torch import nn, optim
 from torch.utils.data import DataLoader, random_split
 from dataset import HipMRIDataset
 from modules import ImprovedUNet3D
+from torch.cuda.amp import autocast, GradScaler
 import torch.nn.functional as F 
+
 
 
 # ----------------------------
@@ -17,8 +19,8 @@ MRI_DIR = "/home/groups/comp3710/HipMRI_Study_open/semantic_MRs"
 LABEL_DIR = "/home/groups/comp3710/HipMRI_Study_open/semantic_labels_only"
 
 EPOCHS = 10    # Increase if GPU allows
-BATCH_SIZE = 1
-LR = 0.002
+BATCH_SIZE = 2
+LR = 0.001
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 print(f"Using device: {DEVICE}")
@@ -39,8 +41,8 @@ train_size = int(0.8 * len(dataset))
 val_size = len(dataset) - train_size
 train_set, val_set = random_split(dataset, [train_size, val_size])
 
-train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True)
-val_loader = DataLoader(val_set, batch_size=1, shuffle=False)
+train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True)
+val_loader = DataLoader(val_set, batch_size=1, shuffle=False, num_workers=2, pin_memory=True)
 
 
 # ----------------------------
@@ -91,6 +93,7 @@ def multiclass_dice(pred, target, num_classes=6, eps=1e-6):
 # ----------------------------
 # TRAINING LOOP
 # ----------------------------
+scaler = GradScaler(enabled=(DEVICE.type == "cuda"))
 for epoch in range(EPOCHS):
     model.train()
     epoch_loss = 0.0
@@ -101,19 +104,19 @@ for epoch in range(EPOCHS):
         label = label.to(DEVICE).long()  # important for CrossEntropyLoss
 
         optimizer.zero_grad()
-        output = model(img)  # [B, 6, D, H, W]
+        with autocast(enabled=(DEVICE.type == "cuda")):
+            output = model(img)
+            if output.shape[2:] != label.shape[1:]:
+                label = F.interpolate(
+                    label.unsqueeze(1).float(),
+                    size=output.shape[2:],
+                    mode="nearest"
+                ).squeeze(1).long()
+            loss = criterion(output, label)
 
-        # adjust label size if mismatch
-        if output.shape[2:] != label.shape[1:]:
-            label = F.interpolate(
-                label.unsqueeze(1).float(),
-                size=output.shape[2:],
-                mode="nearest"
-            ).squeeze(1).long()
-
-        loss = criterion(output, label)
-        loss.backward()
-        optimizer.step()
+        scaler.scale(loss).backward()
+        scaler.step(optimizer)
+        scaler.update()
 
         with torch.no_grad():
             preds = torch.argmax(output, dim=1)
