@@ -73,7 +73,7 @@ class DiceCELoss(nn.Module):
 criterion = DiceCELoss()
 optimizer = optim.Adam(model.parameters(), lr=LR, weight_decay=1e-4)
 scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-    optimizer, mode='max', factor=0.5, patience=3, verbose=True
+    optimizer, mode='max', factor=0.5, patience=3
 )
 def multiclass_dice(pred, target, num_classes=6, eps=1e-6):
     """Compute mean Dice coefficient across all classes."""
