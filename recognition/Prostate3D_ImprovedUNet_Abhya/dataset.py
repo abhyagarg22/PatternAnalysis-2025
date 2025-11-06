@@ -8,7 +8,8 @@ from torch.utils.data import Dataset
 import numpy as np
 
 class HipMRIDataset(Dataset):
-    def __init__(self, image_dir, label_dir, transform=None):
+    def __init__(self, image_dir, label_dir, transform=None, crop=True):
+        self.crop=crop
         self.image_dir = image_dir
         self.label_dir = label_dir
         self.transform = transform
@@ -55,20 +56,18 @@ class HipMRIDataset(Dataset):
 
         # image: add channel
         image = np.expand_dims(image, axis=0)
-        
-        image = image[:, :, image.shape[2] // 2 - 32 : image.shape[2] // 2 + 32]
-        label = label[:, :, label.shape[2] // 2 - 32 : label.shape[2] // 2 + 32]
+        if self.crop:
+
+            image = image[:, :, image.shape[2] // 2 - 32 : image.shape[2] // 2 + 32]
+            label = label[:, :, label.shape[2] // 2 - 32 : label.shape[2] // 2 + 32]
 
         # label: KEEP classes 0..5
         label = label.astype(np.int64)
 
         image = torch.tensor(image, dtype=torch.float32)
         label = torch.tensor(label, dtype=torch.long)
-
-        return image, label
-
-
         if self.transform:
             image = self.transform(image)
 
         return image, label
+

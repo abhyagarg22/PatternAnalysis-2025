@@ -32,7 +32,7 @@ else:
 # ----------------------------
 # DATASET & DATALOADER
 # ----------------------------
-dataset = HipMRIDataset(MRI_DIR, LABEL_DIR, transform=None)
+dataset = HipMRIDataset(MRI_DIR, LABEL_DIR, transform=None, crop=True)
 if len(dataset) == 0:
     raise RuntimeError(f"No .nii.gz files found in {MRI_DIR}. Please check dataset path.")
 

@@ -22,7 +22,7 @@ model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
 model.eval()
 
 # Load data 
-dataset = HipMRIDataset(DATA_DIR, LABEL_DIR)
+dataset = HipMRIDataset(DATA_DIR, LABEL_DIR, crop=False)
 
 if len(dataset) == 0:
     raise RuntimeError(f"No MRI files found in {DATA_DIR}")
