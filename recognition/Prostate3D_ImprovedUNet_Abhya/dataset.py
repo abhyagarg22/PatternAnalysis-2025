@@ -55,6 +55,9 @@ class HipMRIDataset(Dataset):
 
         # image: add channel
         image = np.expand_dims(image, axis=0)
+        
+        image = image[:, :, image.shape[2] // 2 - 32 : image.shape[2] // 2 + 32]
+        label = label[:, :, label.shape[2] // 2 - 32 : label.shape[2] // 2 + 32]
 
         # label: KEEP classes 0..5
         label = label.astype(np.int64)
