@@ -45,6 +45,13 @@ class HipMRIDataset(Dataset):
         image = (image - np.mean(image)) / (np.std(image) + 1e-8)
         image = np.clip(image, -3, 3)
         image = (image - image.min()) / (image.max() - image.min() + 1e-8)
+        if np.random.rand() > 0.5:
+            image = np.flip(image, axis=1).copy()
+            label = np.flip(label, axis=1).copy()
+        
+        if np.random.rand() > 0.5:
+            image = np.flip(image, axis=2).copy()
+            label = np.flip(label, axis=2).copy()
 
         # image: add channel
         image = np.expand_dims(image, axis=0)

@@ -16,9 +16,9 @@ import torch.nn.functional as F
 MRI_DIR = "/home/groups/comp3710/HipMRI_Study_open/semantic_MRs"
 LABEL_DIR = "/home/groups/comp3710/HipMRI_Study_open/semantic_labels_only"
 
-EPOCHS = 13    # Increase if GPU allows
+EPOCHS = 10    # Increase if GPU allows
 BATCH_SIZE = 1
-LR = 0.0001
+LR = 0.002
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 print(f"Using device: {DEVICE}")
@@ -46,10 +46,35 @@ val_loader = DataLoader(val_set, batch_size=1, shuffle=False)
 # ----------------------------
 # MODEL, LOSS, OPTIMIZER
 # ----------------------------
-model = ImprovedUNet3D().to(DEVICE)       # outputs 6 channels now
-criterion = nn.CrossEntropyLoss()         # multiclass loss
-optimizer = optim.Adam(model.parameters(), lr=LR, weight_decay=1e-5)
+model = ImprovedUNet3D().to(DEVICE)
 
+# ← BETTER: Combined loss function
+class DiceCELoss(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.ce = nn.CrossEntropyLoss()
+    
+    def forward(self, pred, target):
+        ce_loss = self.ce(pred, target)
+        
+        # Dice loss
+        pred_soft = torch.softmax(pred, dim=1)
+        dice_loss = 0
+        for c in range(pred.shape[1]):
+            pred_c = pred_soft[:, c]
+            target_c = (target == c).float()
+            intersection = (pred_c * target_c).sum()
+            union = pred_c.sum() + target_c.sum()
+            dice_loss += 1 - (2 * intersection + 1e-6) / (union + 1e-6)
+        dice_loss /= pred.shape[1]
+        
+        return ce_loss + dice_loss
+
+criterion = DiceCELoss()
+optimizer = optim.Adam(model.parameters(), lr=LR, weight_decay=1e-4)
+scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+    optimizer, mode='max', factor=0.5, patience=3, verbose=True
+)
 def multiclass_dice(pred, target, num_classes=6, eps=1e-6):
     """Compute mean Dice coefficient across all classes."""
     dice_scores = []
@@ -123,9 +148,10 @@ for epoch in range(EPOCHS):
 
             preds = torch.argmax(output, dim=1)
             val_dice += multiclass_dice(preds, label).item()
-
-    print(f"🧪 Validation Dice: {val_dice / len(val_loader):.4f}\n")
-
+    val_dice_avg = val_dice / len(val_loader)
+    print(f"Validation Dice: {val_dice / len(val_loader):.4f}\n")
+    scheduler.step(val_dice_avg)
+    
 
 # ----------------------------
 # SAVE MODEL
