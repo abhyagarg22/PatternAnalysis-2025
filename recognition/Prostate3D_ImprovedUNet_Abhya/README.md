@@ -175,7 +175,8 @@ sbatch train_gpu.slurm
 
 ## Output (Log)
 
-<img width="829" height="379" alt="image" src="https://github.com/user-attachments/assets/364ad08a-41dc-4c4e-916e-cfc37ba630e4" />
+<img width="580" height="264" alt="image" src="https://github.com/user-attachments/assets/a576a17b-16af-43c7-bad7-c3563772642f" />
+
 
 
 ---
